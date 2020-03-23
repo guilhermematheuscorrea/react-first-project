@@ -1,29 +1,72 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { FaSpinner } from 'react-icons/fa';
+import PropTypes from 'prop-types';
 import api from '../services/api';
 
-// import { Container } from './styles';
+import Container from '../../components/Container';
+import { Loading, Owner } from './styles';
 
 export default function Repository({ match }) {
-  const [repository, setRepository] = useState({});
+  const [repository, setRepository] = useState({
+    name: '',
+    description: '',
+    owner: {
+      login: '',
+      avatar_url: '',
+    },
+  });
   const [issues, setIssues] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  useEffect(async () => {
-    const repoName = decodeURIComponent(match.params.repository);
+  useEffect(() => {
+    async function fetchData() {
+      const repoName = decodeURIComponent(match.params.repository);
 
-    const [repositoryResponse, issuesResponse] = await Promise.all([
-      api.get(`/repos/${repoName}`),
-      api.get(`/repos/${repoName}/issues`, {
-        params: {
-          state: 'open',
-          per_page: 5,
-        },
-      }),
-    ]);
+      setLoading(true);
 
-    setRepository(repositoryResponse.data);
-    setIssues(issuesResponse.data);
+      const [repositoryResponse, issuesResponse] = await Promise.all([
+        api.get(`/repos/${repoName}`),
+        api.get(`/repos/${repoName}/issues`, {
+          params: {
+            state: 'open',
+            per_page: 5,
+          },
+        }),
+      ]);
+
+      setRepository(repositoryResponse.data);
+      setIssues(issuesResponse.data);
+      setLoading(false);
+    }
+
+    fetchData();
   }, []);
 
-  return <h1>Repository</h1>;
+  return (
+    <>
+      {loading && (
+        <Loading>
+          <FaSpinner color="#FFF" size={70} />
+        </Loading>
+      )}
+
+      <Container>
+        <Owner>
+          <Link to="/">Voltar aos repositórios</Link>
+          <img src={repository.owner.avatar_url} alt={repository.owner.login} />
+          <h1>{repository.name}</h1>
+          <p>{repository.description}</p>
+        </Owner>
+      </Container>
+    </>
+  );
 }
+
+Repository.propTypes = {
+  match: PropTypes.shape({
+    params: PropTypes.shape({
+      repository: PropTypes.string,
+    }),
+  }).isRequired,
+};
